@@ -112,7 +112,7 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { Plus, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { studentService, constants } from '../services/storage'
@@ -124,7 +124,8 @@ const searchGrade = ref('')
 const dialogVisible = ref(false)
 const isEdit = ref(false)
 const editingId = ref(null)
-const refreshKey = ref(0)
+const filteredStudents = ref([])
+const loading = ref(false)
 
 const form = reactive({
   name: '',
@@ -133,9 +134,24 @@ const form = reactive({
   contact: ''
 })
 
-const filteredStudents = computed(() => {
-  refreshKey.value
-  return studentService.search(searchName.value, searchGrade.value)
+const loadStudents = async () => {
+  loading.value = true
+  try {
+    filteredStudents.value = await studentService.search(searchName.value, searchGrade.value)
+  } catch (error) {
+    console.error('Failed to load students:', error)
+    ElMessage.error('加载数据失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  loadStudents()
+})
+
+watch([searchName, searchGrade], () => {
+  loadStudents()
 })
 
 const openModal = (student = null) => {
@@ -161,7 +177,7 @@ const openModal = (student = null) => {
   dialogVisible.value = true
 }
 
-const submitForm = () => {
+const submitForm = async () => {
   if (!form.name) {
     ElMessage.warning('请输入学员姓名')
     return
@@ -175,15 +191,20 @@ const submitForm = () => {
     return
   }
   
-  if (isEdit.value && editingId.value) {
-    studentService.update(editingId.value, { ...form })
-    ElMessage.success('学员信息已更新')
-  } else {
-    studentService.add({ ...form })
-    ElMessage.success('学员添加成功')
+  try {
+    if (isEdit.value && editingId.value) {
+      await studentService.update(editingId.value, { ...form })
+      ElMessage.success('学员信息已更新')
+    } else {
+      await studentService.add({ ...form })
+      ElMessage.success('学员添加成功')
+    }
+    await loadStudents()
+    dialogVisible.value = false
+  } catch (error) {
+    console.error('Failed to save student:', error)
+    ElMessage.error('保存失败')
   }
-  refreshKey.value++
-  dialogVisible.value = false
 }
 
 const deleteStudent = (student) => {
@@ -191,10 +212,15 @@ const deleteStudent = (student) => {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
-  }).then(() => {
-    studentService.delete(student.id)
-    refreshKey.value++
-    ElMessage.success('删除成功')
+  }).then(async () => {
+    try {
+      await studentService.delete(student.id)
+      await loadStudents()
+      ElMessage.success('删除成功')
+    } catch (error) {
+      console.error('Failed to delete student:', error)
+      ElMessage.error('删除失败')
+    }
   }).catch(() => {})
 }
 

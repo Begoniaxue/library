@@ -166,7 +166,7 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { planService, studentService } from '../services/storage'
@@ -175,7 +175,9 @@ const selectedStudentId = ref('')
 const dialogVisible = ref(false)
 const isEdit = ref(false)
 const editingId = ref(null)
-const refreshKey = ref(0)
+const students = ref([])
+const allPlans = ref([])
+const loading = ref(false)
 
 const form = reactive({
   studentId: '',
@@ -184,19 +186,44 @@ const form = reactive({
   tasks: []
 })
 
-const students = computed(() => studentService.getAll())
+const loadStudents = async () => {
+  try {
+    students.value = await studentService.getAll()
+  } catch (error) {
+    console.error('Failed to load students:', error)
+    ElMessage.error('加载学员数据失败')
+  }
+}
 
-const allPlans = computed(() => {
-  refreshKey.value
-  return planService.getAll()
-})
+const loadPlans = async () => {
+  loading.value = true
+  try {
+    allPlans.value = await planService.getAll()
+  } catch (error) {
+    console.error('Failed to load plans:', error)
+    ElMessage.error('加载计划数据失败')
+  } finally {
+    loading.value = false
+  }
+}
 
-const filteredPlans = computed(() => {
-  let plans = allPlans.value
+const filteredPlans = ref([])
+
+const updateFilteredPlans = () => {
+  let plans = [...allPlans.value]
   if (selectedStudentId.value) {
     plans = plans.filter(p => p.studentId === selectedStudentId.value)
   }
-  return plans.sort((a, b) => new Date(b.weekStart) - new Date(a.weekStart))
+  filteredPlans.value = plans.sort((a, b) => new Date(b.weekStart) - new Date(a.weekStart))
+}
+
+watch([allPlans, selectedStudentId], () => {
+  updateFilteredPlans()
+})
+
+onMounted(() => {
+  loadStudents()
+  loadPlans()
 })
 
 const getStudentName = (id) => {
@@ -263,14 +290,24 @@ const removeTask = (index) => {
   form.tasks.splice(index, 1)
 }
 
-const toggleTask = (plan, taskIndex) => {
-  const newTasks = [...plan.tasks]
-  newTasks[taskIndex].completed = !newTasks[taskIndex].completed
-  planService.update(plan.id, { tasks: newTasks })
-  refreshKey.value++
+const toggleTask = async (plan, taskIndex) => {
+  try {
+    const newTasks = [...plan.tasks]
+    newTasks[taskIndex].completed = !newTasks[taskIndex].completed
+    await planService.update(plan.id, { 
+      studentId: plan.studentId,
+      weekStart: plan.weekStart,
+      weekEnd: plan.weekEnd,
+      tasks: newTasks 
+    })
+    await loadPlans()
+  } catch (error) {
+    console.error('Failed to update task:', error)
+    ElMessage.error('更新任务失败')
+  }
 }
 
-const submitForm = () => {
+const submitForm = async () => {
   if (!form.studentId) {
     ElMessage.warning('请选择学员')
     return
@@ -291,15 +328,20 @@ const submitForm = () => {
     tasks: form.tasks
   }
   
-  if (isEdit.value && editingId.value) {
-    planService.update(editingId.value, planData)
-    ElMessage.success('周计划已更新')
-  } else {
-    planService.add(planData)
-    ElMessage.success('周计划创建成功')
+  try {
+    if (isEdit.value && editingId.value) {
+      await planService.update(editingId.value, planData)
+      ElMessage.success('周计划已更新')
+    } else {
+      await planService.add(planData)
+      ElMessage.success('周计划创建成功')
+    }
+    await loadPlans()
+    dialogVisible.value = false
+  } catch (error) {
+    console.error('Failed to save plan:', error)
+    ElMessage.error('保存失败')
   }
-  refreshKey.value++
-  dialogVisible.value = false
 }
 
 const deletePlan = (plan) => {
@@ -307,10 +349,15 @@ const deletePlan = (plan) => {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
-  }).then(() => {
-    planService.delete(plan.id)
-    refreshKey.value++
-    ElMessage.success('删除成功')
+  }).then(async () => {
+    try {
+      await planService.delete(plan.id)
+      await loadPlans()
+      ElMessage.success('删除成功')
+    } catch (error) {
+      console.error('Failed to delete plan:', error)
+      ElMessage.error('删除失败')
+    }
   }).catch(() => {})
 }
 </script>

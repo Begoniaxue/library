@@ -162,7 +162,7 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { dictationService, studentService, constants } from '../services/storage'
@@ -174,7 +174,8 @@ const selectedDate = ref('')
 const dialogVisible = ref(false)
 const isEdit = ref(false)
 const editingId = ref(null)
-const refreshKey = ref(0)
+const students = ref([])
+const records = ref([])
 
 const today = new Date().toISOString().split('T')[0]
 
@@ -189,23 +190,28 @@ const form = reactive({
   checkDate: today
 })
 
-const students = computed(() => studentService.getAll())
+const filteredRecords = ref([])
 
-const allRecords = computed(() => {
-  refreshKey.value
-  return dictationService.getAll()
-})
+const loadData = async () => {
+  try {
+    students.value = await studentService.getAll()
+    records.value = await dictationService.getAll()
+    updateFilteredRecords()
+  } catch (error) {
+    console.error('Failed to load dictation data:', error)
+  }
+}
 
-const filteredRecords = computed(() => {
-  let records = allRecords.value
+const updateFilteredRecords = () => {
+  let result = records.value
   if (selectedStudentId.value) {
-    records = records.filter(r => r.studentId === selectedStudentId.value)
+    result = result.filter(r => r.studentId === selectedStudentId.value)
   }
   if (selectedDate.value) {
-    records = records.filter(r => r.checkDate === selectedDate.value)
+    result = result.filter(r => r.checkDate === selectedDate.value)
   }
-  return records.sort((a, b) => new Date(b.checkDate) - new Date(a.checkDate))
-})
+  filteredRecords.value = result.sort((a, b) => new Date(b.checkDate) - new Date(a.checkDate))
+}
 
 const getStudentName = (id) => {
   const s = students.value.find(x => x.id === id)
@@ -262,7 +268,7 @@ const openModal = (record = null) => {
   dialogVisible.value = true
 }
 
-const submitForm = () => {
+const submitForm = async () => {
   if (!form.studentId) {
     ElMessage.warning('请选择学员')
     return
@@ -274,15 +280,20 @@ const submitForm = () => {
   
   const data = { ...form }
   
-  if (isEdit.value && editingId.value) {
-    dictationService.update(editingId.value, data)
-    ElMessage.success('更新成功')
-  } else {
-    dictationService.add(data)
-    ElMessage.success('添加成功')
+  try {
+    if (isEdit.value && editingId.value) {
+      await dictationService.update(editingId.value, data)
+      ElMessage.success('更新成功')
+    } else {
+      await dictationService.add(data)
+      ElMessage.success('添加成功')
+    }
+    await loadData()
+    dialogVisible.value = false
+  } catch (error) {
+    console.error('Failed to save dictation:', error)
+    ElMessage.error('保存失败')
   }
-  refreshKey.value++
-  dialogVisible.value = false
 }
 
 const deleteRecord = (record) => {
@@ -290,10 +301,19 @@ const deleteRecord = (record) => {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
-  }).then(() => {
-    dictationService.delete(record.id)
-    refreshKey.value++
-    ElMessage.success('删除成功')
+  }).then(async () => {
+    try {
+      await dictationService.delete(record.id)
+      ElMessage.success('删除成功')
+      await loadData()
+    } catch (error) {
+      console.error('Failed to delete dictation:', error)
+      ElMessage.error('删除失败')
+    }
   }).catch(() => {})
 }
+
+onMounted(() => {
+  loadData()
+})
 </script>

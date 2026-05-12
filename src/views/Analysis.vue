@@ -256,7 +256,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { 
   studentService, 
   planService, 
@@ -267,13 +267,36 @@ import {
 
 const selectedStudentId = ref('')
 
-const students = computed(() => studentService.getAll())
+const students = ref([])
+const allPlans = ref([])
+const allRecitations = ref([])
+const allDictations = ref([])
+const allHomeworks = ref([])
+
+const loadAllData = async () => {
+  try {
+    const [studentsData, plansData, recitationsData, dictationsData, homeworksData] = await Promise.all([
+      studentService.getAll(),
+      planService.getAll(),
+      recitationService.getAll(),
+      dictationService.getAll(),
+      homeworkService.getAll()
+    ])
+    students.value = studentsData
+    allPlans.value = plansData
+    allRecitations.value = recitationsData
+    allDictations.value = dictationsData
+    allHomeworks.value = homeworksData
+  } catch (error) {
+    console.error('Failed to load analysis data:', error)
+  }
+}
 
 const getStudentStats = (studentId) => {
-  const plans = planService.getByStudent(studentId)
-  const recitations = recitationService.getByStudent(studentId)
-  const dictations = dictationService.getByStudent(studentId)
-  const homeworks = homeworkService.getByStudent(studentId)
+  const plans = allPlans.value.filter(p => p.studentId === studentId)
+  const recitations = allRecitations.value.filter(r => r.studentId === studentId)
+  const dictations = allDictations.value.filter(d => d.studentId === studentId)
+  const homeworks = allHomeworks.value.filter(h => h.studentId === studentId)
   
   let planCompletionRate = 0
   if (plans.length > 0) {
@@ -331,8 +354,8 @@ const weakPoints = computed(() => {
   const points = []
   
   students.value.forEach(student => {
-    const recitations = recitationService.getByStudent(student.id)
-    const dictations = dictationService.getByStudent(student.id)
+    const recitations = allRecitations.value.filter(r => r.studentId === student.id)
+    const dictations = allDictations.value.filter(d => d.studentId === student.id)
     
     recitations.filter(r => r.status !== 'skilled').forEach(r => {
       points.push({
@@ -357,19 +380,19 @@ const weakPoints = computed(() => {
 })
 
 const studentPlans = computed(() => {
-  return selectedStudentId.value ? planService.getByStudent(selectedStudentId.value) : []
+  return selectedStudentId.value ? allPlans.value.filter(p => p.studentId === selectedStudentId.value) : []
 })
 
 const studentRecitations = computed(() => {
-  return selectedStudentId.value ? recitationService.getByStudent(selectedStudentId.value) : []
+  return selectedStudentId.value ? allRecitations.value.filter(r => r.studentId === selectedStudentId.value) : []
 })
 
 const studentDictations = computed(() => {
-  return selectedStudentId.value ? dictationService.getByStudent(selectedStudentId.value) : []
+  return selectedStudentId.value ? allDictations.value.filter(d => d.studentId === selectedStudentId.value) : []
 })
 
 const studentHomeworks = computed(() => {
-  return selectedStudentId.value ? homeworkService.getByStudent(selectedStudentId.value) : []
+  return selectedStudentId.value ? allHomeworks.value.filter(h => h.studentId === selectedStudentId.value) : []
 })
 
 const getPlanProgress = (plan) => {
@@ -377,4 +400,8 @@ const getPlanProgress = (plan) => {
   const completed = plan.tasks.filter(t => t.completed).length
   return `${completed}/${plan.tasks.length} 任务完成`
 }
+
+onMounted(() => {
+  loadAllData()
+})
 </script>

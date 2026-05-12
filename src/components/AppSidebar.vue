@@ -29,7 +29,9 @@ import {
   ChatDotRound,
   EditPen,
   List,
-  DataAnalysis
+  DataAnalysis,
+  Edit,
+  Postcard
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -44,7 +46,9 @@ const menuItems = [
   { path: '/recitation', label: '背诵检查', icon: ChatDotRound },
   { path: '/dictation', label: '默写检查', icon: EditPen },
   { path: '/homework', label: '作业检查', icon: List },
-  { path: '/analysis', label: '学情分析', icon: DataAnalysis }
+  { path: '/analysis', label: '学情分析', icon: DataAnalysis },
+  { path: '/block-editor-demo', label: '编辑器演示', icon: Edit },
+  { path: '/sticky-note-wall', label: '便签墙', icon: Postcard }
 ]
 </script>
 

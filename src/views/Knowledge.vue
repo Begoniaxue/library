@@ -154,7 +154,7 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { Plus, Star, Edit, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { knowledgeService, constants } from '../services/storage'
@@ -166,7 +166,8 @@ const filterSubject = ref('')
 const dialogVisible = ref(false)
 const isEdit = ref(false)
 const editingId = ref(null)
-const refreshKey = ref(0)
+const allKnowledge = ref([])
+const loading = ref(false)
 
 const form = reactive({
   title: '',
@@ -175,9 +176,28 @@ const form = reactive({
   content: ''
 })
 
-const allKnowledge = computed(() => {
-  refreshKey.value
-  return knowledgeService.getAll()
+const loadKnowledge = async () => {
+  loading.value = true
+  try {
+    if (filterGrade.value || filterSubject.value) {
+      allKnowledge.value = await knowledgeService.getByGradeAndSubject(filterGrade.value, filterSubject.value)
+    } else {
+      allKnowledge.value = await knowledgeService.getAll()
+    }
+  } catch (error) {
+    console.error('Failed to load knowledge:', error)
+    ElMessage.error('加载数据失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  loadKnowledge()
+})
+
+watch([filterGrade, filterSubject], () => {
+  loadKnowledge()
 })
 
 const groupedGrades = computed(() => {
@@ -186,10 +206,11 @@ const groupedGrades = computed(() => {
 })
 
 const filteredKnowledge = computed(() => {
-  let items = allKnowledge.value
-  if (filterGrade.value) items = items.filter(k => k.grade === filterGrade.value)
-  if (filterSubject.value) items = items.filter(k => k.subject === filterSubject.value)
-  return items.sort((a, b) => b.isImportant - a.isImportant)
+  return [...allKnowledge.value].sort((a, b) => {
+    const aImp = a.isImportant ? 1 : 0
+    const bImp = b.isImportant ? 1 : 0
+    return bImp - aImp
+  })
 })
 
 const getSubjectsByGrade = (grade) => {
@@ -238,7 +259,7 @@ const openModal = (item = null) => {
   dialogVisible.value = true
 }
 
-const submitForm = () => {
+const submitForm = async () => {
   if (!form.title) {
     ElMessage.warning('请输入标题')
     return
@@ -252,21 +273,31 @@ const submitForm = () => {
     return
   }
   
-  if (isEdit.value && editingId.value) {
-    knowledgeService.update(editingId.value, { ...form })
-    ElMessage.success('更新成功')
-  } else {
-    knowledgeService.add({ ...form })
-    ElMessage.success('添加成功')
+  try {
+    if (isEdit.value && editingId.value) {
+      await knowledgeService.update(editingId.value, { ...form })
+      ElMessage.success('更新成功')
+    } else {
+      await knowledgeService.add({ ...form })
+      ElMessage.success('添加成功')
+    }
+    await loadKnowledge()
+    dialogVisible.value = false
+  } catch (error) {
+    console.error('Failed to save knowledge:', error)
+    ElMessage.error('保存失败')
   }
-  refreshKey.value++
-  dialogVisible.value = false
 }
 
-const toggleImportant = (item) => {
-  knowledgeService.toggleImportant(item.id)
-  refreshKey.value++
-  ElMessage.success(item.isImportant ? '已取消重点标记' : '已标记为重点')
+const toggleImportant = async (item) => {
+  try {
+    await knowledgeService.toggleImportant(item.id)
+    await loadKnowledge()
+    ElMessage.success(item.isImportant ? '已取消重点标记' : '已标记为重点')
+  } catch (error) {
+    console.error('Failed to toggle important:', error)
+    ElMessage.error('操作失败')
+  }
 }
 
 const deleteItem = (item) => {
@@ -274,10 +305,15 @@ const deleteItem = (item) => {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
-  }).then(() => {
-    knowledgeService.delete(item.id)
-    refreshKey.value++
-    ElMessage.success('删除成功')
+  }).then(async () => {
+    try {
+      await knowledgeService.delete(item.id)
+      await loadKnowledge()
+      ElMessage.success('删除成功')
+    } catch (error) {
+      console.error('Failed to delete knowledge:', error)
+      ElMessage.error('删除失败')
+    }
   }).catch(() => {})
 }
 </script>

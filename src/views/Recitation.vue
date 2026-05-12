@@ -201,7 +201,7 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive, watch } from 'vue'
+import { ref, computed, reactive, watch, onMounted } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { recitationService, studentService, constants } from '../services/storage'
@@ -214,7 +214,8 @@ const selectedDate = ref('')
 const dialogVisible = ref(false)
 const isEdit = ref(false)
 const editingId = ref(null)
-const refreshKey = ref(0)
+const students = ref([])
+const allRecords = ref([])
 
 const selectedRecitationId = ref('')
 
@@ -233,14 +234,19 @@ const form = reactive({
   remark: ''
 })
 
-const students = computed(() => studentService.getAll())
+const filteredRecords = ref([])
 
-const allRecords = computed(() => {
-  refreshKey.value
-  return recitationService.getAll()
-})
+const loadData = async () => {
+  try {
+    students.value = await studentService.getAll()
+    allRecords.value = await recitationService.getAll()
+    updateFilteredRecords()
+  } catch (error) {
+    console.error('Failed to load recitation data:', error)
+  }
+}
 
-const filteredRecords = computed(() => {
+const updateFilteredRecords = () => {
   let records = allRecords.value
   if (selectedStudentId.value) {
     records = records.filter(r => r.studentId === selectedStudentId.value)
@@ -248,7 +254,11 @@ const filteredRecords = computed(() => {
   if (selectedDate.value) {
     records = records.filter(r => r.checkDate === selectedDate.value)
   }
-  return records.sort((a, b) => new Date(b.checkDate) - new Date(a.checkDate))
+  filteredRecords.value = records.sort((a, b) => new Date(b.checkDate) - new Date(a.checkDate))
+}
+
+watch([selectedStudentId, selectedDate], () => {
+  updateFilteredRecords()
 })
 
 const availableSubjects = computed(() => {
@@ -295,11 +305,9 @@ const getStatusText = (status) => {
 }
 
 const onStudentChange = () => {
-  // 如果是新增，可以根据学员的年级自动填充
   if (!isEdit.value && form.studentId) {
     const student = students.value.find(s => s.id === form.studentId)
     if (student && student.grade) {
-      // 检查该年级是否在当前科目下有数据
       if (form.subject && textbookRecitations[form.subject] && textbookRecitations[form.subject][student.grade]) {
         form.contentGrade = student.grade
       }
@@ -372,7 +380,7 @@ const openModal = (record = null) => {
   dialogVisible.value = true
 }
 
-const submitForm = () => {
+const submitForm = async () => {
   if (!form.studentId) {
     ElMessage.warning('请选择学员')
     return
@@ -390,15 +398,20 @@ const submitForm = () => {
     return
   }
   
-  if (isEdit.value && editingId.value) {
-    recitationService.update(editingId.value, { ...form })
-    ElMessage.success('更新成功')
-  } else {
-    recitationService.add({ ...form })
-    ElMessage.success('添加成功')
+  try {
+    if (isEdit.value && editingId.value) {
+      await recitationService.update(editingId.value, { ...form })
+      ElMessage.success('更新成功')
+    } else {
+      await recitationService.add({ ...form })
+      ElMessage.success('添加成功')
+    }
+    await loadData()
+    dialogVisible.value = false
+  } catch (error) {
+    console.error('Failed to save recitation:', error)
+    ElMessage.error('保存失败')
   }
-  refreshKey.value++
-  dialogVisible.value = false
 }
 
 const deleteRecord = (record) => {
@@ -406,10 +419,19 @@ const deleteRecord = (record) => {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
-  }).then(() => {
-    recitationService.delete(record.id)
-    refreshKey.value++
-    ElMessage.success('删除成功')
+  }).then(async () => {
+    try {
+      await recitationService.delete(record.id)
+      await loadData()
+      ElMessage.success('删除成功')
+    } catch (error) {
+      console.error('Failed to delete:', error)
+      ElMessage.error('删除失败')
+    }
   }).catch(() => {})
 }
+
+onMounted(() => {
+  loadData()
+})
 </script>

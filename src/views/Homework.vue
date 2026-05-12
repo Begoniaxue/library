@@ -157,7 +157,7 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { List } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { homeworkService, studentService, constants } from '../services/storage'
@@ -167,7 +167,8 @@ const { subjects } = constants
 const checkDate = ref(new Date().toISOString().split('T')[0])
 const selectedStudentId = ref('')
 const batchDialogVisible = ref(false)
-const refreshKey = ref(0)
+const students = ref([])
+const allRecords = ref([])
 
 const batchForm = reactive({
   subject: '语文',
@@ -175,19 +176,32 @@ const batchForm = reactive({
   studentStatuses: new Map()
 })
 
-const students = computed(() => studentService.getAll())
+const filteredRecords = ref([])
 
-const allRecords = computed(() => {
-  refreshKey.value
-  return homeworkService.getAll()
-})
+const loadData = async () => {
+  try {
+    students.value = await studentService.getAll()
+    allRecords.value = await homeworkService.getAll()
+    updateFilteredRecords()
+  } catch (error) {
+    console.error('Failed to load homework data:', error)
+  }
+}
 
-const filteredRecords = computed(() => {
+const updateFilteredRecords = () => {
   let records = allRecords.value.filter(r => r.date === checkDate.value)
   if (selectedStudentId.value) {
     records = records.filter(r => r.studentId === selectedStudentId.value)
   }
-  return records.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  filteredRecords.value = records.sort((a, b) => {
+    const dateA = a.createdAt || a.date
+    const dateB = b.createdAt || b.date
+    return new Date(dateB) - new Date(dateA)
+  })
+}
+
+watch([checkDate, selectedStudentId], () => {
+  updateFilteredRecords()
 })
 
 const getStudentName = (id) => {
@@ -229,31 +243,42 @@ const openBatchModal = () => {
   batchDialogVisible.value = true
 }
 
-const toggleStatus = (record) => {
-  homeworkService.update(record.id, { completed: !record.completed })
-  refreshKey.value++
-  ElMessage.success(record.completed ? '已标记为未完成' : '已标记为完成')
+const toggleStatus = async (record) => {
+  try {
+    await homeworkService.update(record.id, { completed: !record.completed })
+    await loadData()
+    ElMessage.success(record.completed ? '已标记为未完成' : '已标记为完成')
+  } catch (error) {
+    console.error('Failed to update status:', error)
+    ElMessage.error('更新失败')
+  }
 }
 
-const submitBatch = () => {
+const submitBatch = async () => {
   if (batchForm.studentStatuses.size === 0) {
     ElMessage.warning('请至少选择一个学员')
     return
   }
   
-  batchForm.studentStatuses.forEach((completed, studentId) => {
-    homeworkService.add({
-      studentId: studentId,
-      subject: batchForm.subject,
-      content: batchForm.content || '日常作业',
-      completed: completed,
-      date: checkDate.value
-    })
-  })
-  
-  refreshKey.value++
-  batchDialogVisible.value = false
-  ElMessage.success('保存成功')
+  try {
+    const entries = Array.from(batchForm.studentStatuses.entries())
+    for (const [studentId, completed] of entries) {
+      await homeworkService.add({
+        studentId: studentId,
+        subject: batchForm.subject,
+        content: batchForm.content || '日常作业',
+        completed: completed,
+        date: checkDate.value
+      })
+    }
+    
+    await loadData()
+    batchDialogVisible.value = false
+    ElMessage.success('保存成功')
+  } catch (error) {
+    console.error('Failed to submit batch:', error)
+    ElMessage.error('保存失败')
+  }
 }
 
 const deleteRecord = (record) => {
@@ -261,10 +286,19 @@ const deleteRecord = (record) => {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
-  }).then(() => {
-    homeworkService.delete(record.id)
-    refreshKey.value++
-    ElMessage.success('删除成功')
+  }).then(async () => {
+    try {
+      await homeworkService.delete(record.id)
+      await loadData()
+      ElMessage.success('删除成功')
+    } catch (error) {
+      console.error('Failed to delete:', error)
+      ElMessage.error('删除失败')
+    }
   }).catch(() => {})
 }
+
+onMounted(() => {
+  loadData()
+})
 </script>

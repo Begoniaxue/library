@@ -48,6 +48,18 @@ const routes = [
     name: 'Analysis',
     component: () => import('../views/Analysis.vue'),
     meta: { title: '学情分析' }
+  },
+  {
+    path: '/block-editor-demo',
+    name: 'BlockEditorDemo',
+    component: () => import('../views/BlockEditorDemo.vue'),
+    meta: { title: '块状编辑器演示' }
+  },
+  {
+    path: '/sticky-note-wall',
+    name: 'StickyNoteWall',
+    component: () => import('../views/StickyNoteWall.vue'),
+    meta: { title: '便签墙' }
   }
 ]
 

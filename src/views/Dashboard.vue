@@ -82,7 +82,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { 
   User, 
@@ -97,16 +97,19 @@ import { studentService, planService, homeworkService, knowledgeService } from '
 
 const router = useRouter()
 
-const recentStudents = computed(() => {
-  return studentService.getAll().slice(-5).reverse()
-})
+const recentStudents = ref([])
+const studentCount = ref(0)
+const planCount = ref(0)
+const homeworkCount = ref(0)
+const knowledgeCount = ref(0)
+const loading = ref(false)
 
 const today = new Date().toISOString().split('T')[0]
 
-const statCards = computed(() => [
+const statCards = ref([
   {
     title: '学员总数',
-    value: studentService.getAll().length,
+    value: 0,
     icon: User,
     bgColor: 'bg-blue-50',
     iconColor: 'text-blue-500',
@@ -114,7 +117,7 @@ const statCards = computed(() => [
   },
   {
     title: '本周计划数',
-    value: planService.getAll().length,
+    value: 0,
     icon: Calendar,
     bgColor: 'bg-green-50',
     iconColor: 'text-green-500',
@@ -122,7 +125,7 @@ const statCards = computed(() => [
   },
   {
     title: '今日作业检查',
-    value: homeworkService.getByDate(today).length,
+    value: 0,
     icon: List,
     bgColor: 'bg-purple-50',
     iconColor: 'text-purple-500',
@@ -130,13 +133,38 @@ const statCards = computed(() => [
   },
   {
     title: '知识点总数',
-    value: knowledgeService.getAll().length,
+    value: 0,
     icon: Document,
     bgColor: 'bg-orange-50',
     iconColor: 'text-orange-500',
     valueColor: 'text-orange-600'
   }
 ])
+
+const loadData = async () => {
+  loading.value = true
+  try {
+    const students = await studentService.getAll()
+    const plans = await planService.getAll()
+    const homeworks = await homeworkService.getByDate(today)
+    const knowledges = await knowledgeService.getAll()
+    
+    recentStudents.value = students.slice(-5).reverse()
+    
+    statCards.value[0].value = students.length
+    statCards.value[1].value = plans.length
+    statCards.value[2].value = homeworks.length
+    statCards.value[3].value = knowledges.length
+  } catch (error) {
+    console.error('Failed to load dashboard data:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  loadData()
+})
 
 const quickLinks = [
   { path: '/students', label: '新增学员', icon: User, bgColor: 'bg-blue-50', iconColor: 'text-blue-500' },
