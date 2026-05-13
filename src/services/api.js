@@ -252,6 +252,25 @@ export const stickyNoteService = {
   }
 }
 
+export const blogService = {
+  async getAll() {
+    return api.get('/blogs')
+  },
+  
+  async getById(id) {
+    return api.get(`/blogs/${id}`)
+  },
+  
+  async add(blog) {
+    return api.post('/blogs', blog)
+  },
+  
+  async delete(id) {
+    await api.delete(`/blogs/${id}`)
+    return true
+  }
+}
+
 export const constants = {
   grades: ['一年级', '二年级', '三年级', '四年级', '五年级', '六年级', '七年级', '八年级', '九年级', '高一', '高二', '高三'],
   subjects: ['语文', '数学', '英语', '物理', '化学', '生物', '历史', '地理', '政治'],

@@ -101,6 +101,7 @@ const editingContent = ref('')
 
 let stompClient = null
 let subscriptions = []
+const clientId = 'client-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9)
 
 const canvasStyle = computed(() => ({
   transform: `scale(${scale.value})`,
@@ -168,12 +169,10 @@ const connectWebSocket = () => {
     
     subscriptions.push(stompClient.subscribe('/topic/sticky-notes/move', (message) => {
       const body = JSON.parse(message.body)
-      if (draggingId.value !== body.id) {
-        const note = stickyNotes.value.find(n => n.id === body.id)
-        if (note) {
-          note.x = body.x
-          note.y = body.y
-        }
+      const note = stickyNotes.value.find(n => n.id === body.id)
+      if (note && note.id !== draggingId.value) {
+        note.x = body.x
+        note.y = body.y
       }
     }))
     
@@ -233,6 +232,7 @@ const handleCanvasClick = async (event) => {
     if (!stickyNotes.value.find(n => n.id === newNote.id)) {
       stickyNotes.value.push(newNote)
     }
+    sendWebSocketMessage('/app/sticky-notes/create', newNote)
     nextTick(() => {
       const createdNote = stickyNotes.value.find(n => n.id === newNote.id)
       if (createdNote) {
@@ -345,6 +345,7 @@ const saveContent = async (id) => {
     try {
       await stickyNoteService.updateContent(id, editingContent.value)
       note.content = editingContent.value
+      sendWebSocketMessage('/app/sticky-notes/update', note)
     } catch (error) {
       console.error('Failed to update note content:', error)
     }
@@ -362,6 +363,7 @@ const deleteNote = async (id) => {
       editingId.value = null
       editingContent.value = ''
     }
+    sendWebSocketMessage('/app/sticky-notes/delete', id)
   } catch (error) {
     console.error('Failed to delete note:', error)
   }

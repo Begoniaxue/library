@@ -10,6 +10,7 @@
 /Users/a1234/Documents/trae_projects/libirary/backend/src/main/java/com/studyroom/entity/PlanTask.java
 /Users/a1234/Documents/trae_projects/libirary/backend/src/main/java/com/studyroom/service/PlanService.java
 /Users/a1234/Documents/trae_projects/libirary/backend/src/main/java/com/studyroom/dto/ConstantsDTO.java
+/Users/a1234/Documents/trae_projects/libirary/backend/src/main/java/com/studyroom/controller/BlogController.java
 /Users/a1234/Documents/trae_projects/libirary/backend/src/main/java/com/studyroom/repository/TextbookRecitationRepository.java
 /Users/a1234/Documents/trae_projects/libirary/backend/src/main/java/com/studyroom/service/HomeworkService.java
 /Users/a1234/Documents/trae_projects/libirary/backend/src/main/java/com/studyroom/controller/ConstantsController.java
@@ -21,6 +22,7 @@
 /Users/a1234/Documents/trae_projects/libirary/backend/src/main/java/com/studyroom/entity/Recitation.java
 /Users/a1234/Documents/trae_projects/libirary/backend/src/main/java/com/studyroom/config/DataInitializer.java
 /Users/a1234/Documents/trae_projects/libirary/backend/src/main/java/com/studyroom/service/StickyNoteService.java
+/Users/a1234/Documents/trae_projects/libirary/backend/src/main/java/com/studyroom/dto/BlogDTO.java
 /Users/a1234/Documents/trae_projects/libirary/backend/src/main/java/com/studyroom/service/StudentService.java
 /Users/a1234/Documents/trae_projects/libirary/backend/src/main/java/com/studyroom/service/KnowledgeService.java
 /Users/a1234/Documents/trae_projects/libirary/backend/src/main/java/com/studyroom/controller/StickyNoteWebSocketController.java
@@ -33,6 +35,7 @@
 /Users/a1234/Documents/trae_projects/libirary/backend/src/main/java/com/studyroom/repository/PlanRepository.java
 /Users/a1234/Documents/trae_projects/libirary/backend/src/main/java/com/studyroom/service/TextbookRecitationService.java
 /Users/a1234/Documents/trae_projects/libirary/backend/src/main/java/com/studyroom/controller/DictationController.java
+/Users/a1234/Documents/trae_projects/libirary/backend/src/main/java/com/studyroom/service/BlogService.java
 /Users/a1234/Documents/trae_projects/libirary/backend/src/main/java/com/studyroom/repository/HomeworkRepository.java
 /Users/a1234/Documents/trae_projects/libirary/backend/src/main/java/com/studyroom/repository/StudentRepository.java
 /Users/a1234/Documents/trae_projects/libirary/backend/src/main/java/com/studyroom/repository/KnowledgeRepository.java

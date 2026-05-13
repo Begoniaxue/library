@@ -47,6 +47,7 @@ const menuItems = [
   { path: '/dictation', label: '默写检查', icon: EditPen },
   { path: '/homework', label: '作业检查', icon: List },
   { path: '/analysis', label: '学情分析', icon: DataAnalysis },
+  { path: '/blogs', label: '博客平台', icon: Document },
   { path: '/block-editor-demo', label: '编辑器演示', icon: Edit },
   { path: '/sticky-note-wall', label: '便签墙', icon: Postcard }
 ]

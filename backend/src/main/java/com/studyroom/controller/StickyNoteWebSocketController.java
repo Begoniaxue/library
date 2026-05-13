@@ -21,4 +21,25 @@ public class StickyNoteWebSocketController {
             messagingTemplate.convertAndSend("/topic/sticky-notes/move", dto);
         }
     }
+    
+    @MessageMapping("/sticky-notes/create")
+    public void handleCreate(@Payload StickyNoteDTO dto) {
+        if (dto.getId() != null) {
+            messagingTemplate.convertAndSend("/topic/sticky-notes/create", dto);
+        }
+    }
+    
+    @MessageMapping("/sticky-notes/update")
+    public void handleUpdate(@Payload StickyNoteDTO dto) {
+        if (dto.getId() != null) {
+            messagingTemplate.convertAndSend("/topic/sticky-notes/update", dto);
+        }
+    }
+    
+    @MessageMapping("/sticky-notes/delete")
+    public void handleDelete(@Payload String id) {
+        if (id != null && !id.isEmpty()) {
+            messagingTemplate.convertAndSend("/topic/sticky-notes/delete", id);
+        }
+    }
 }

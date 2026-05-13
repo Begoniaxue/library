@@ -12,6 +12,7 @@
     "@element-plus/icons-vue": "^2.3.2",
     "@stomp/stompjs": "^7.3.0",
     "element-plus": "^2.14.0",
+    "marked": "^18.0.3",
     "sockjs-client": "^1.6.1",
     "vue": "^3.4.0",
     "vue-router": "^4.3.0"

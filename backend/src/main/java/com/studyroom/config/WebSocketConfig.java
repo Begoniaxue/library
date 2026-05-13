@@ -21,5 +21,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.addEndpoint("/ws/sticky-notes")
                 .setAllowedOriginPatterns("*")
                 .withSockJS();
+        registry.addEndpoint("/ws/sticky-notes/websocket")
+                .setAllowedOriginPatterns("*");
     }
 }

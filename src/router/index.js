@@ -60,6 +60,18 @@ const routes = [
     name: 'StickyNoteWall',
     component: () => import('../views/StickyNoteWall.vue'),
     meta: { title: '便签墙' }
+  },
+  {
+    path: '/blogs',
+    name: 'BlogList',
+    component: () => import('../views/BlogList.vue'),
+    meta: { title: '博客文章列表' }
+  },
+  {
+    path: '/blog-editor',
+    name: 'BlogEditor',
+    component: () => import('../views/BlogEditor.vue'),
+    meta: { title: '博客编辑器' }
   }
 ]
 
